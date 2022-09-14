@@ -27,7 +27,7 @@ jobs:
       run: gmake target=x86_64-unknown-dragonfly
       working-directory: crystal
     - name: Release
-      uses: "marvinpinto/action-automatic-release@latest"
+      uses: "marvinpinto/action-automatic-releases@latest"
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
         prerelease: false
