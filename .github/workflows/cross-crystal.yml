@@ -1,0 +1,22 @@
+name: Cross-compile crystal.o for DragonFly
+
+on:
+  push:
+
+jobs:
+  cross:
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Checkout crystal
+      uses: actions/checkout@v3
+      with:
+        repository: crystal-lang/crystal
+        ref: 1.4.1
+        path: crystal
+    - name: Install LLVM
+      uses: KyleMayes/install-llvm-action@v1
+      with:
+        version: "14.0"
+    - name: Cross-compile crystal.o
+      run: gmake target=x86_64-unknown-dragonfly
+      working-directory: crystal
