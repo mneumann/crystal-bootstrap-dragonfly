@@ -26,7 +26,8 @@ jobs:
     - name: Cross-compile crystal.o
       run: gmake target=x86_64-unknown-dragonfly
       working-directory: crystal
-    - name: "marvinpinto/action-automatic-release@latest"
+    - name: Release
+      uses: "marvinpinto/action-automatic-release@latest"
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
         prerelease: false
