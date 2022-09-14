@@ -21,7 +21,7 @@ crystal.o:
 
 src/llvm/ext/llvm_ext.o:
 	env LLVM_CONFIG=${LLVM_CONFIG} \
-		gmake lllvm_ext
+		gmake llvm_ext
 
 clean:
 	rm -f crystal.o src/llvm/ext/llvm_ext.o crystal-bootstrap
