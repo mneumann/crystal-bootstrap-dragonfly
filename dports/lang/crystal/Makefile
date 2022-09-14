@@ -1,19 +1,16 @@
-PORTNAME=		crystal
-DISTVERSION=		1.5.0
-CATEGORIES=		lang
-MASTER_SITES=		https://dl.unrelenting.technology/crystal/:bootstrap
-DISTFILES=		${BOOTSTRAP_PATH}:bootstrap
-DIST_SUBDIR=		${PORTNAME}
-EXTRACT_ONLY=		${DISTNAME}${EXTRACT_SUFX}
+PORTNAME=	crystal
+DISTVERSION=	1.5.1
+CATEGORIES=	lang
+MASTER_SITES=	https://github.com/mneumann/crystal-bootstrap-dragonfly/releases/download/1.5.1-p0/:bootstrap
+DISTFILES=	crystal.o:bootstrap
+DIST_SUBDIR=	${PORTNAME}
+EXTRACT_ONLY=	${DISTNAME}${EXTRACT_SUFX}
 
-MAINTAINER=	greg@unrelenting.technology
+MAINTAINER=	mneumann@ntecs.de
 COMMENT=	Language with Ruby-like syntax and static type checking
 WWW=		https://crystal-lang.org
 
 LICENSE=	APACHE20
-
-ONLY_FOR_ARCHS=			aarch64 amd64
-ONLY_FOR_ARCHS_REASON=		requires prebuilt bootstrap compiler
 
 BUILD_DEPENDS=	${LOCALBASE}/bin/llvm-config${LLVM_VERSION}:devel/llvm${BOOTSTRAP_LLVM_VERSION} \
 		git:devel/git
@@ -28,15 +25,16 @@ USES=		compiler gmake pkgconfig ssl
 USE_GITHUB=	yes
 GH_ACCOUNT=	crystal-lang
 
-LLVM_VERSION?=	10
-BOOTSTRAP_LLVM_VERSION=	10
-BOOTSTRAP_PATH=	crystal-${BOOTSTRAP_VER}-freebsd12-${ARCH}-llvm${BOOTSTRAP_LLVM_VERSION}
-BOOTSTRAP_VER?=	1.1.1
+LLVM_VERSION?=	14
+BOOTSTRAP_LLVM_VERSION=	14
+
+LLVM_CONFIG="${LOCALBASE}/bin/llvm-config${LLVM_VERSION}"
 
 MAKE_ARGS=	SHELL=sh \
-		LLVM_CONFIG="${LOCALBASE}/bin/llvm-config${LLVM_VERSION}" \
+		LLVM_CONFIG="${LLVM_CONFIG}" \
 		FLAGS="--release --no-debug --progress --threads=${MAKE_JOBS_NUMBER}" \
 		EXPORTS='CRYSTAL_CONFIG_PATH="lib:${PREFIX}/lib/${PORTNAME}"' \
+		CRYSTAL=".build/crystal-bootstrap" \
 		CRYSTAL_CACHE_DIR="${WRKDIR}/cache" \
 		CRYSTAL_CONFIG_VERSION="${DISTVERSION}"
 
@@ -51,10 +49,6 @@ OPTIONS_SUB=		yes
 
 .include <bsd.port.options.mk>
 
-.if ${OPSYS} != FreeBSD
-IGNORE=		not supported on anything but FreeBSD
-.endif
-
 # crystal needs pkgconfig to determine SSL variants but these are not
 # present in FreeBSD base. We splice in the correct info based on
 # FreeBSD version and hope it doesn't change during minor releases.
@@ -66,19 +60,24 @@ EXTRA_PATCHES=	${PATCHDIR}/extra-patch-src_openssl_lib__crypto.cr \
 
 post-extract:
 	${MKDIR} ${WRKSRC}/.build
-	${CP} ${DISTDIR}/${DIST_SUBDIR}/${BOOTSTRAP_PATH} ${WRKSRC}/.build/crystal
-	${CHMOD} +x ${WRKSRC}/.build/crystal
-	${LN} -s x86_64-freebsd ${WRKSRC}/src/lib_c/aarch64-portbld-freebsd
-	${LN} -s x86_64-freebsd ${WRKSRC}/src/lib_c/aarch64-freebsd
+	${CP} ${DISTDIR}/${DIST_SUBDIR}/crystal.o ${WRKSRC}/.build/crystal.o
 
 post-patch:
-.if ${SSL_DEFAULT} == "base" && ${OSREL:R} < 15
+.if ${SSL_DEFAULT} == "base"
 	@${REINPLACE_CMD} -i '' \
 		-e 's|CRYSTAL_SSL_VERSION|1.1.1|g' \
 		-e 's|CRYSTAL_SSL_LDFLAGS|${OPENSSLLIB}|g' \
 		${WRKSRC}/src/openssl/lib_ssl.cr \
 		${WRKSRC}/src/openssl/lib_crypto.cr
 .endif
+
+pre-build:
+	cd ${WRKSRC} && ${SETENV} LLVM_CONFIG="${LLVM_CONFIG}" ${MAKE_CMD} llvm_ext
+	cd ${WRKSRC} && ${CC} -o .build/crystal-bootstrap  \
+		.build/crystal.o src/llvm/ext/llvm_ext.o \
+		-rdynamic \
+		`${LLVM_CONFIG} --libs --system-libs --ldflags 2> /dev/null` \
+		-lstdc++ -lpcre -lm -lgc-threaded -lpthread -L/usr/local/lib -levent
 
 do-build-DOCS-on:
 	cd ${WRKSRC} && ${SETENV} ${MAKE_ENV} ${MAKE_CMD} ${MAKE_ARGS} docs \
@@ -104,17 +103,5 @@ do-install-ZSH-on:
 	${MKDIR} ${STAGEDIR}${LOCALBASE}/share/zsh/site-functions
 	${INSTALL_DATA} ${INSTALL_WRKSRC}/etc/completion.zsh \
 			${STAGEDIR}${LOCALBASE}/share/zsh/site-functions/_crystal
-
-.if !defined(_CRYSTAL_MAKESUM_GUARD)
-makesum:
-	${MAKE} -D_CRYSTAL_MAKESUM_GUARD makesum ARCH=${ONLY_FOR_ARCHS:O:[1]} DISTINFO_FILE=${DISTINFO_FILE}.tmp
-.for arch in ${ONLY_FOR_ARCHS:O:[2..-1]}
-	${MAKE} -D_CRYSTAL_MAKESUM_GUARD makesum ARCH=${arch} DISTINFO_FILE=${DISTINFO_FILE}.${arch}
-	${SED} 1d ${DISTINFO_FILE}.${arch} >> ${DISTINFO_FILE}.tmp
-	${RM} ${DISTINFO_FILE}.${arch}
-.endfor
-	${AWK} '!seen[$$0]++' ${DISTINFO_FILE}.tmp > ${DISTINFO_FILE}
-	${RM} ${DISTINFO_FILE}.tmp
-.endif
 
 .include <bsd.port.mk>
