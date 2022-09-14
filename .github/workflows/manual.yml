@@ -23,7 +23,7 @@ jobs:
     - name: Install Crystal
       uses: crystal-lang/install-crystal@v1
       with:
-        crystal: ${env.CRYSTAL_VERSION}}
+        crystal: ${{env.CRYSTAL_VERSION}}
     - name: Cross-compile crystal.o
       run: gmake target=x86_64-unknown-dragonfly
       working-directory: crystal
