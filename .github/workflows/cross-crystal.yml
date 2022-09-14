@@ -24,3 +24,8 @@ jobs:
     - name: Cross-compile crystal.o
       run: gmake target=x86_64-unknown-dragonfly
       working-directory: crystal
+    - name: Upload crystal.o artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: crystal-object
+        path: .build/crystal.o
