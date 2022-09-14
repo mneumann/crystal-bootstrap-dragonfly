@@ -17,6 +17,10 @@ jobs:
       uses: KyleMayes/install-llvm-action@v1
       with:
         version: "14.0"
+    - name: Install Crystal
+      uses: crystal-lang/install-crystal@v1
+      with:
+        crystal: 1.4.1
     - name: Cross-compile crystal.o
       run: gmake target=x86_64-unknown-dragonfly
       working-directory: crystal
