@@ -1,0 +1,28 @@
+# Run from withing crystal github repo with: make -f Makefile.bootstrap.
+
+LLVM_CONFIG=llvm-config14
+CRYSTAL_BOOTSTRAP=1.4.1-p0
+
+build: .build/crystal
+	.build/crystal version
+
+.build/crystal: crystal-bootstrap
+	env LLVM_CONFIG=llvm-config14 CRYSTAL=./crystal-bootstrap gmake
+
+crystal-bootstrap: crystal.o src/llvm/ext/llvm_ext.o
+	cc -o crystal-bootstrap  \
+		crystal.o src/llvm/ext/llvm_ext.o \
+		-rdynamic \
+		`${LLVM_CONFIG} --libs --system-libs --ldflags 2> /dev/null` \
+		-lstdc++ -lpcre -lm -lgc-threaded -lpthread -L/usr/local/lib -levent
+
+crystal.o:
+	fetch https://github.com/mneumann/crystal-bootstrap-dragonfly/releases/download/${CRYSTAL_BOOTSTRAP}/crystal.o 
+
+src/llvm/ext/llvm_ext.o:
+	env LLVM_CONFIG=${LLVM_CONFIG} \
+		gmake lllvm_ext
+
+clean:
+	rm -f crystal.o src/llvm/ext/llvm_ext.o crystal-bootstrap
+	gmake clean
